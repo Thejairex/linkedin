@@ -38,7 +38,7 @@ class linkedin:
             )
             self.__save_cookies()
             self.loggedin = True
-            
+
         else:
             self.driver.get("https://www.linkedin.com/feed/")
             self.loggedin = True
@@ -102,13 +102,16 @@ class searcher(linkedin):
         
         time.sleep(3)
         
-        job_listings = self.driver.find_element(By.XPATH, '//ul[contains(@class, "scaffold-layout__list-container")]/li')
+        # get job listings from the page
+        job_listings = self.driver.find_elements(By.CSS_SELECTOR, ".ember-view.jobs-search-results__list-item.occludable-update.p0.relative.scaffold-layout__list-item")
+        # job_listings = self.driver.find_element(By.XPATH, '//ul[contains(@class, "scaffold-layout__list-container")]/li')
+        print(job_listings)
+        for job in job_listings:
+            job_title = job.find_element(By.TAG_NAME, 'strong').text
+            company_name = job.find_element(By.CLASS_NAME, 'job-card-container__primary-description ').text
+            location = job.find_element(By.CLASS_NAME, 'job-card-container__metadata-item ').text
+            print(f'Title: {job_title}, Company: {company_name}, Location: {location}')
         
-        # for job in job_listings:
-        #     job_title = job.find_element(By.XPATH, './/h3').text
-        #     company_name = job.find_element(By.XPATH, './/h4').text
-        #     location = job.find_element(By.XPATH, './/span[contains(@class, "job-result-card__location")]').text
-        #     print(f'Title: {job_title}, Company: {company_name}, Location: {location}')
         time.sleep(3)
 
 
