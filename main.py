@@ -3,8 +3,12 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+from dotenv import load_dotenv
 import time
 import pickle
+import logging
+import os
 
 class linkedin:
     def __init__(self) -> None:
@@ -104,20 +108,36 @@ class searcher(linkedin):
         
         # get job listings from the page
         job_listings = self.driver.find_elements(By.CSS_SELECTOR, ".ember-view.jobs-search-results__list-item.occludable-update.p0.relative.scaffold-layout__list-item")
-        # job_listings = self.driver.find_element(By.XPATH, '//ul[contains(@class, "scaffold-layout__list-container")]/li')
-        print(job_listings)
-        for job in job_listings:
-            job_title = job.find_element(By.TAG_NAME, 'strong').text
-            company_name = job.find_element(By.CLASS_NAME, 'job-card-container__primary-description ').text
-            location = job.find_element(By.CLASS_NAME, 'job-card-container__metadata-item ').text
-            print(f'Title: {job_title}, Company: {company_name}, Location: {location}')
+
+        for i, job in enumerate(job_listings):
+            # desplazarse hasta el elemento actual
+            self.driver.execute_script("arguments[0].scrollIntoView();", job)
+            
+            # manejar el error de no encontrar el elemento
+            try:
+                job_title = job.find_element(By.TAG_NAME, 'strong').text
+                company_name = job.find_element(By.CLASS_NAME, 'job-card-container__primary-description ').text
+                location = job.find_element(By.CLASS_NAME, 'job-card-container__metadata-item ').text
+                easy_solicitude = job.find_element(By.CSS_SELECTOR, '.jobs-apply-button.artdeco-button.artdeco-button--3.artdeco-button--primary.ember-view').text
+                print(f'Title: {job_title}, Company: {company_name}, Location: {location}, Easy solicitude: {easy_solicitude}')
+                
+            except KeyboardInterrupt:
+                exit()
+            
+            except Exception as e:
+                # Crear carpeta de log si no existe y guardaqr los errores en un error.log
+                if not os.path.exists('Logs'):
+                    os.mkdir('Logs')
+                logging.basicConfig(filename='Logs/error.log', level=logging.ERROR)
+                logging.error(e)
         
         time.sleep(3)
 
 
 def main():
+    load_dotenv()
     link = searcher()
-    link.login('juarezjesusyair@gmail.com', 'Aiwa2015')
+    link.login(os.getenv('EMAIL'), os.getenv('PASSWORD') )
     link.search_jobs("Data Scientist")
     
 if __name__ == '__main__':
