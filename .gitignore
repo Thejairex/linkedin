@@ -1,5 +1,6 @@
 # Private Files
 *.pkl
+job_listings.csv
 
 # Folder ignore
 Images/
