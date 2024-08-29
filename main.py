@@ -5,12 +5,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from dotenv import load_dotenv
+from urllib.parse import urlparse, parse_qs
 import pandas as pd
 import time
 import pickle
 import logging
 import os
 
+from db import Jobs
 class linkedin:
     def __init__(self) -> None:
         options = webdriver.ChromeOptions()
@@ -103,22 +105,13 @@ class linkedin:
 class searcher(linkedin):
     def __init__(self) -> None:
         super().__init__()
-    
+        self.jobs = Jobs('Data/jobs.db')
     def search_jobs(self, keyword: str, page_number: int,):
         super().search(keyword)
         super().screen_shot()
         
         self.driver.find_element(By.CLASS_NAME, 'search-reusables__primary-filter').click()
         time.sleep(3)
-        
-        # create a dictionary to store job listings
-        job_founds = {
-            "job_title": [],
-            "company_name": [],
-            "location": [],
-            "easy_apply": [],
-            "link": [],
-        }
         
         currect_page = 0
         while currect_page < page_number:
@@ -142,15 +135,13 @@ class searcher(linkedin):
                     solicitude = button.find_element(By.XPATH, ".//button//span[contains(@class, 'artdeco-button__text')]").text
                     
                     link = self.driver.current_url
-                    
+                    link_params = parse_qs(urlparse(link).query)
                     print(f'Index: {i+1}, Title: {job_title}')
                     
-                    # add job listing to the dictionary
-                    job_founds["job_title"].append(job_title)
-                    job_founds["company_name"].append(company_name)
-                    job_founds["location"].append(location)
-                    job_founds["easy_apply"].append(True if solicitude.strip() == "Solicitud sencilla" else False)
-                    job_founds["link"].append(link)
+                    
+                    # store job in the database
+                    self.jobs.insert(link_params['jobId'][0], job_title, company_name, location, solicitude, keyword, link)
+                    
                 except KeyboardInterrupt:
                     self.shutdown()
                     exit()
@@ -173,9 +164,7 @@ class searcher(linkedin):
         
         time.sleep(3)
 
-        # save job listings to a csv file
-        df = pd.DataFrame(job_founds)
-        df.to_csv('Data/job_listings.csv', index=False)
+        self.shutdown()
 
 def main():
     load_dotenv()
