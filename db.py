@@ -15,7 +15,11 @@ class DB:
                         location varchar(255),
                         easy_apply boolean,
                         keyword varchar(255),
-                        link varchar(400)
+                        link varchar(400),
+                        found_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        publish_date DATE,
+                        applied boolean,
+                        applied_at DATETIME NULL
                         )
                         """)
             self.save(conn, cur)
@@ -49,7 +53,7 @@ class DB:
             if conn:
                 conn.close()  # Cierra la conexión si existe
         except Exception as e:
-            print(f"Error to close connection: {e}")
+            print(f"Erwror to close connection: {e}")
 
     def export_to_csv(self, table_name, csv_filename):
         conn, cur = self.connect()
@@ -74,14 +78,17 @@ class DB:
 class Jobs(DB):
     def __init__(self, db_name) -> None:
         super().__init__(db_name)
-        self.columns = ['job_id', 'job_title', 'company_name', 'location', 'easy_apply', 'keyword', 'link']
+        self.columns = ('id', 'title', 'company', 'location', 'easy_apply', 'keyword', 'link')
 
-    def insert(self, id, title, company, location, easy_apply, keyword,link):
+    def insert(self, id, title, company, location, easy_apply, keyword,link, publish_date):
         try:
             conn, cur = self.connect()
-            cur.execute("""INSERT INTO jobs VALUES (?, ?, ?, ?, ?, ?, ?)""", 
-                        (id, title, company, location, easy_apply, keyword, link))
-            
+            cur.execute(
+                """INSERT INTO jobs 
+                        (id, title, company, location, easy_apply, keyword, link, publish_date, applied) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", 
+                        (id, title, company, location, easy_apply, keyword, link, publish_date, False))
+
             self.save(conn, cur)
 
             return True
@@ -107,6 +114,17 @@ class Jobs(DB):
         rows = cur.fetchall()
         self.close(conn, cur)
         print(rows)
+        return rows
+    
+    def select_ids(self):
+        conn, cur = self.connect()
+        cur.execute("SELECT id FROM jobs")
+        rows = cur.fetchall()
+        self.close(conn, cur)
+        
+        # transform a unique list of tuples into a list of ids
+        rows = [row[0] for row in rows]
+        
         return rows
     
     def export_to_csv(self):

@@ -6,6 +6,8 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from dotenv import load_dotenv
 from urllib.parse import urlparse, parse_qs
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import pandas as pd
 import time
 import pickle
@@ -57,6 +59,12 @@ class linkedin:
         Save cookies in a json file
         """
         cookies = self.driver.get_cookies()
+        
+        # create folder Data if not exist
+        if not os.path.exists('Data'):
+            os.makedirs('Data')
+        
+        # Save cookies in a pickle file
         with open('Data/cookies.pkl', 'wb') as file:
             pickle.dump(cookies, file)
             file.close()
@@ -106,7 +114,8 @@ class searcher(linkedin):
     def __init__(self) -> None:
         super().__init__()
         self.jobs = Jobs('Data/jobs.db')
-    def search_jobs(self, keyword: str, page_number: int,):
+        self.current_date = datetime.now()
+    def search_jobs(self, keyword: str, page_number: int = 1,):
         super().search(keyword)
         super().screen_shot()
         
@@ -128,24 +137,58 @@ class searcher(linkedin):
                 try:
                     # find job title, company name, location, and easy apply button
                     job.click()
+                    
+                    link = self.driver.current_url
+                    link_params = parse_qs(urlparse(link).query)
+                    job_id = int(link_params.get('currentJobId', [None])[0])
+                    
+                    if job_id in self.jobs.select_ids(): continue
+                    
                     job_title = job.find_element(By.TAG_NAME, 'strong').text
                     company_name = job.find_element(By.CLASS_NAME, 'job-card-container__primary-description ').text
                     location = job.find_element(By.CLASS_NAME, 'job-card-container__metadata-item ').text
                     button = job.find_element(By.XPATH, "//div[contains(@class, 'jobs-apply-button--top-card')]")
                     solicitude = button.find_element(By.XPATH, ".//button//span[contains(@class, 'artdeco-button__text')]").text
+                    publish_jobs = self.driver.find_element(By.XPATH, '//div[@class="job-details-jobs-unified-top-card__primary-description-container"]//div[@class="t-black--light mt2"]/span[3]').text
                     
-                    link = self.driver.current_url
-                    link_params = parse_qs(urlparse(link).query)
+                    if 'de nuevo' in publish_jobs: units = int(publish_jobs.split()[-2])
+                    else: units = int(publish_jobs.split()[1])
+                    
+                    if 'día' in publish_jobs:
+                        publish_jobs = self.current_date - timedelta(days=units)
+                        
+                    elif 'semana' in publish_jobs:
+                        publish_jobs = self.current_date - timedelta(weeks=units)
+                        
+                    elif 'mes' in publish_jobs:
+                        publish_jobs = self.current_date - relativedelta(months=units)
+                        
+                    elif 'hora' in publish_jobs and 'minuto' in publish_jobs:
+                        publish_jobs = self.current_date
+
+                    else :
+                        continue
+                    
+                    publish_jobs = publish_jobs.strftime('%Y-%m-%d')
+                    
+                    
                     print(f'Index: {i+1}, Title: {job_title}')
+                    print(publish_jobs)
                     
                     
                     # store job in the database
-                    self.jobs.insert(link_params['jobId'][0], job_title, company_name, location, solicitude, keyword, link)
+                    self.jobs.insert(job_id, job_title, company_name, location, solicitude, keyword, link, publish_jobs)
                     
                 except KeyboardInterrupt:
                     self.shutdown()
                     exit()
-                    
+                
+                # error get units od publish_jobs is str not int
+                except ValueError:
+                    print("Error: units od publish_jobs is str not int.")
+                    print("Value Error: ", publish_jobs)
+                    continue
+                
                 except Exception as e:
                     # Crear carpeta de log si no existe y guardaqr los errores en un error.log
                     if not os.path.exists('Logs'):
@@ -170,7 +213,7 @@ def main():
     load_dotenv()
     link = searcher()
     link.login(os.getenv('EMAIL'), os.getenv('PASSWORD') )
-    link.search_jobs("Data Scientist", 2)
+    link.search_jobs("Data Scientist")
     
 if __name__ == '__main__':
     main()
