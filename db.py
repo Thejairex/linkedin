@@ -62,12 +62,12 @@ class DB:
             rows = cur.fetchall()
             headers = [description[0] for description in cur.description] 
 
-            with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
+            with open(f"Data/{csv_filename}", 'w', newline='', encoding='utf-8') as csvfile:
                 csvwriter = csv.writer(csvfile)
                 csvwriter.writerow(headers)
                 csvwriter.writerows(rows)
 
-            print(f"Data exported to {csv_filename} successfully.")
+            print(f"Data exported to Data/{csv_filename} successfully.")
 
         except Exception as e:
             print(f"Error to export data: {e}")
@@ -113,7 +113,6 @@ class Jobs(DB):
         cur.execute("SELECT * FROM jobs")
         rows = cur.fetchall()
         self.close(conn, cur)
-        print(rows)
         return rows
     
     def select_ids(self):

@@ -18,10 +18,15 @@ from db import Jobs
 
 
 class linkedin:
+    """
+    Class to interact with linkedin using selenium webdriver.
+    """
+
     def __init__(self) -> None:
         options = webdriver.ChromeOptions()
         options.binary_location = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
-        # options.add_argument("--headless")
+        options.add_argument("--headless")
+        options.add_argument("--disable-dev-shm-usage")
 
         self.driver = webdriver.Chrome(options=options)
         self.loggedin = False
@@ -30,14 +35,17 @@ class linkedin:
         """
         Login to linkedin
 
-        Parameters
-        ----------
+        args:
+
         user_email : str
             Email of the user
         user_password : str
             Password of the user
         """
+
+        # check if cookies exist and load cookies
         if not self.__load_cookies():
+            # try to login
             self.driver.get('https://www.linkedin.com/login')
             username = self.driver.find_element(By.ID, 'username')
             password = self.driver.find_element(By.ID, 'password')
@@ -52,15 +60,17 @@ class linkedin:
             self.loggedin = True
 
         else:
+
             self.driver.get("https://www.linkedin.com/feed/")
             self.loggedin = True
 
+        # close pop-up
         self.driver.find_element(
             By.XPATH, "//header[contains(@class, 'msg-overlay-bubble-header')]").click()
 
     def __save_cookies(self):
         """
-        Save cookies in a json file
+        Save cookies in a pickle file.
         """
         cookies = self.driver.get_cookies()
 
@@ -75,9 +85,11 @@ class linkedin:
 
     def __load_cookies(self):
         """
-        Load cookies from a json file.
+        Load cookies from a json file. 
+        If not exist, return False
         """
         try:
+            # load cookies
             self.driver.get('https://www.linkedin.com')
             with open('Data/cookies.pkl', 'rb') as file:
                 cookies = pickle.load(file)
@@ -100,6 +112,12 @@ class linkedin:
         self.driver.save_screenshot('Images/screenshot.png')
 
     def search(self, keyword: str):
+        """
+        Search for a keyword on search bar of linkedin.
+
+        args:
+            keyword (str): keyword to search
+        """
         search_box = self.driver.find_element(
             By.CLASS_NAME, 'search-global-typeahead__input')
         search_box.send_keys(keyword)
@@ -111,26 +129,51 @@ class linkedin:
         )
 
     def close(self):
+        """
+        Close the current window.
+        """
         self.driver.close()
 
     def shutdown(self):
+        """
+        Shutdown the driver and close the browser.
+        """
         self.driver.quit()
 
 
-class searcher(linkedin):
+class Searcher(linkedin):
+    """
+    Searcher class to search in the search bar on linkedin.
+    """
+
     def __init__(self) -> None:
+        """
+        Has a super class linkedin.
+        Initialize jobs database.
+        Get current date.
+        """
         super().__init__()
         self.jobs = Jobs('Data/jobs.db')
         self.current_date = datetime.now()
 
     def search_jobs(self, keyword: str, page_number: int = 1,):
+        """
+        Find jobs on linkedin and save them in the database using keyword.
+
+        args:
+            keyword (str): keyword to search
+            page_number (int): number of pages to search
+        """
+
         super().search(keyword)
         super().screen_shot()
 
+        # wait for the page to load
         self.driver.find_element(
             By.CLASS_NAME, 'search-reusables__primary-filter').click()
         time.sleep(3)
 
+        # iterate through pages
         currect_page = 0
         while currect_page < page_number:
             # get job listings from the page
@@ -140,11 +183,11 @@ class searcher(linkedin):
 
             # iterate through job listings
             for i, job in enumerate(job_listings):
-                # desplazarse hasta el elemento actual
+                # scroll to the job
                 self.driver.execute_script(
                     "arguments[0].scrollIntoView();", job)
 
-                # manejar el error de no encontrar el elemento
+                # try to collect data
                 try:
                     # find job title, company name, location, and easy apply button
                     job.click()
@@ -173,6 +216,7 @@ class searcher(linkedin):
                     else:
                         units = int(publish_jobs.split()[1])
 
+                    # control units of publish_jobs
                     if 'día' in publish_jobs:
                         publish_jobs = self.current_date - \
                             timedelta(days=units)
@@ -192,9 +236,6 @@ class searcher(linkedin):
                         continue
 
                     publish_jobs = publish_jobs.strftime('%Y-%m-%d')
-
-                    print(f'Index: {i+1}, Title: {job_title}')
-                    print(publish_jobs)
 
                     # store job in the database
                     self.jobs.insert(job_id, job_title, company_name,
@@ -229,17 +270,11 @@ class searcher(linkedin):
                     (By.ID, 'search-reusables__filters-bar'))
             )
 
-        time.sleep(3)
+        # close the browser
+        self.close()
 
-        self.shutdown()
+    def get_jobs(self):
+        return self.jobs.select()
 
-
-def main():
-    load_dotenv()
-    link = searcher()
-    link.login(os.getenv('EMAIL'), os.getenv('PASSWORD'))
-    link.search_jobs("Data Engineer")
-
-
-if __name__ == '__main__':
-    main()
+    def export_to_csv(self):
+        return self.jobs.export_to_csv()
