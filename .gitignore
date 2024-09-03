@@ -1,6 +1,8 @@
 # Private Files
 *.pkl
 job_listings.csv
+start.bat
+jobs.db
 
 # Folder ignore
 Images/
