@@ -53,7 +53,7 @@ class linkedin:
             password.send_keys(user_password)
             self.driver.find_element(
                 By.XPATH, '//button[@type="submit"]').click()
-            WebDriverWait(self.driver, 10).until(
+            WebDriverWait(self.driver, 30).until(
                 EC.presence_of_element_located((By.ID, 'global-nav-search'))
             )
             self.__save_cookies()
