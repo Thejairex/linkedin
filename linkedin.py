@@ -270,11 +270,11 @@ class Searcher(linkedin):
                     (By.ID, 'search-reusables__filters-bar'))
             )
 
-        # close the browser
-        self.close()
+        self.driver.get("https://www.linkedin.com/feed/")
 
     def get_jobs(self):
-        return self.jobs.select()
+        rows = self.jobs.select()
+        return [dict(zip(self.jobs.columns, row)) for row in rows]
 
     def export_to_csv(self):
         return self.jobs.export_to_csv()

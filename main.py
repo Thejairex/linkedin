@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Form
 from threading import Thread
-
+from dotenv import load_dotenv
 from linkedin import Searcher
 
 import os
 app = FastAPI()
-
+load_dotenv()
 
 searcher = Searcher()
 
@@ -16,7 +16,7 @@ def read_root():
 
 # Función para ejecutar la búsqueda en un hilo separado
 def background_search(keyword, page_number):
-    searcher.search_jobs(page_number)
+    searcher.search_jobs(keyword, page_number)
 
 @app.get("/search")
 def search(keyword: str, page_number: int):
@@ -30,7 +30,8 @@ def search(keyword: str, page_number: int):
 
 @app.get("/jobs")
 def get_jobs():
-    return searcher.get_jobs()
+    jobs = searcher.get_jobs()
+    return jobs
 
 @app.get("/logintest")
 def logintest():
@@ -41,4 +42,9 @@ def logintest():
 def login(user_email: str = Form(...), user_password: str = Form(...)):
     searcher.login(user_email, user_password)
     return {"message": "Se ha iniciado sesión."}
+
+# Cuando se cierre la aplicación se cierra el navegador
+@app.on_event("shutdown")
+def shutdown():
+    searcher.shutdown()
     

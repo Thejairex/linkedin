@@ -79,7 +79,7 @@ class DB:
 class Jobs(DB):
     def __init__(self, db_name) -> None:
         super().__init__(db_name)
-        self.columns = ('id', 'title', 'company', 'location', 'easy_apply', 'keyword', 'link')
+        self.columns = ('id', 'title', 'company', 'location', 'easy_apply', 'keyword', 'link', 'found_at', 'publish_date', 'applied', 'applied_at')
 
     def insert(self, id, title, company, location, easy_apply, keyword,link, publish_date):
         try:
