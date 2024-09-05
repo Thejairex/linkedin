@@ -1,9 +1,11 @@
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, UploadFile, File
 from threading import Thread
 from dotenv import load_dotenv
 from linkedin import Searcher
 
 import os
+import pickle
+
 app = FastAPI()
 load_dotenv()
 
@@ -47,4 +49,18 @@ def login(user_email: str = Form(...), user_password: str = Form(...)):
 @app.on_event("shutdown")
 def shutdown():
     searcher.shutdown()
+
+# subir coockies (recibe pickle)
+@app.post("/cookies")
+async def cookies(cookies: UploadFile = File(...)):
+    # Crear carpeta "Data" si no existe
+    if not os.path.exists('Data'):
+        os.makedirs('Data')
+        
+    # Guardar las cookies en el archivo 'Data/cookies.pkl'
+    file_location = "Data/cookies.pkl"
+    with open(file_location, "wb") as file:
+        content = await cookies.read()  # Leemos el contenido del archivo
+        file.write(content)  # Guardamos el contenido en 'cookies.pkl'
     
+    return {"message": "Las cookies se han guardado correctamente."}
